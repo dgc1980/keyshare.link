@@ -313,8 +313,13 @@ while ( $row = $result->fetch_assoc() ) {
             $result = $conn->query($sql);
             $row = $result->fetch_assoc();
             if ( $row['hash'] == $path[1]) {
-                if ($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) {
+                if (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND $row['id'] > 21 ))) {
                     echo "<center>Here is your gifted key for,<br><b>".$row['gametitle']."</b>";
+                    if ( $row['reddit_who'] != $_SESSION['username'] ) {
+                        echo "<br><i>Warning, this key was claimed by another user<br>and may already be claimed<br>as a security measure to prevent reselling<br>the key has been revealed</i><br>";
+                    } else {
+                        echo "<b>WARNING<br>THIS KEY WILL BE REVEALED TO PUBLIC AFTER 30 MINUTES</b><br>";
+                    }
                     echo '<input value="'.$row['gamekey'].'" class="form-control form-control-sm" style="width: 300px; text-align: center;">';
                     echo "<br><br>This key was kindly gifted by <a href='https://reddit.com/u/".$row['reddit_owner']."' target='_blank'>u/".$row['reddit_owner']."</a>";
                     echo "<br><br>please remember to thank the user who shared this key by replying to their comment.";
