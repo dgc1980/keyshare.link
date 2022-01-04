@@ -14,6 +14,7 @@ features of the site are:
 * restriction of claimant for minimum comment karma
 * restriction of claimant for minimum account age
 * hCaptcha to prevent bots from scraping
+* reveals the key to public are 30 minutes to prevent resellers hold on to the key.
 * claiming the key will bind to your account
 * submitter of key is able to see who claimed the key
 
