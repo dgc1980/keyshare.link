@@ -281,6 +281,8 @@ Giveaways have the option to apply restrictions like karma and account age<br><b
 These are FIRST COME FIRST SERVED giveaway, with no random giveaway<br><br>
 The person who has created the giveaway is able to see the reddit account of who claimed it.<br><br>
 You are more than welcome to use this on other subs and not limited to r/GameDeals<br><br>
+<br><br><br><br><br><br>
+<small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br><br>
 <?php
 }
 if ( $path[0] == "profile" ) {
@@ -369,7 +371,7 @@ while ( $row = $result->fetch_assoc() ) {
 </div>
 
 
-<div id="footer" style="color: black;">created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> for the caring users of <a href="https://reddit.com/r/GameDeals" target="_blank">r/GameDeals</a> who love to share their game keys<br>
+<div id="footer" style="color: black;">created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> for the caring users of <a href="https://reddit.com/r/GameDeals" target="_blank">r/GameDeals</a> who love to share their game keys - <small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br>
 this is a free service, if you wish to donote, please do via <a href="https://ko-fi.com/dgc1980">Ko-fi</a> or BTC 33gAxQGTW84CmoskiuZdnMTtAqKaCQG8Pz
 </div>
 
