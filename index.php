@@ -128,7 +128,7 @@ if ( $path[0] == "newkey" ) {
             $t = getToken(8);
             $sql = "INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash) VALUES ('".addslashes($_POST['InputGameTitle'])."','".addslashes($_POST['InputGameKey'])."','".time()."',1,1,'".addslashes($_SESSION['username'])."',".intval($_POST['InputKarmaLink']).",".intval($_POST['InputKarmaComment']).",".intval($_POST['InputAccountAge']).",'".$t."');";
             $result = $conn->query($sql);
-            header("Location: /" );
+            header("Location: /profile" );
             die("Redirect");
         }
     }
