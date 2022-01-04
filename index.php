@@ -102,7 +102,7 @@ if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
         if ($_POST['submit'] == 1) {
             $t = getToken(8);
-            $sql = "INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash) VALUES ('".addslashes($_POST['InputGameTitle'])."','".addslashes($_POST['InputGameKey'])."','".time()."',1,1,'".addslashes($_SESSION['username'])."',".intval($_POST['InputKarmaLink']).",".intval($_POST['InputKarmaComment']).",".intval($_POST['InputAccountAge']).",'".$t."');";
+            $sql = "INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash) VALUES ('".addslashes(htmlentities($_POST['InputGameTitle']))."','".addslashes(htmlentities($_POST['InputGameKey']))."','".time()."',1,1,'".addslashes($_SESSION['username'])."',".intval($_POST['InputKarmaLink']).",".intval($_POST['InputKarmaComment']).",".intval($_POST['InputAccountAge']).",'".$t."');";
             $result = $conn->query($sql);
             header("Location: /profile" );
             die("Redirect");
