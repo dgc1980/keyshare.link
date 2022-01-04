@@ -17,7 +17,7 @@ features of the site are:
 * reveals the key to public are 30 minutes to prevent resellers hold on to the key.
 * claiming the key will bind to your account
 * submitter of key is able to see who claimed the key
-
+* rate limited claiming of 1 key per 5 minutes to give a fair chance to people claiming
 
 
 
