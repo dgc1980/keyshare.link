@@ -26,7 +26,7 @@ function getToken($length){
     }
     return $token;
 }
-$state = uniqid();
+$state = uniqidReal();
 
 
 
