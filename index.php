@@ -2,31 +2,8 @@
 session_start();
 include('database.inc.php'); //database connection
 require_once('config.inc.php'); //reddit and hcaptcha config
-function geturl($url,$token) {
-    $UA = "reddit-oauth/1.1.1 by dgc1980";
-    $ch = curl_init();
-    curl_setopt($ch, CURLOPT_VERBOSE, false);
-    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_URL, $url);
-    curl_setopt($ch, CURLOPT_HEADER, false);
-    if ( $fields == null ) {
-    } else {
-            $fields_string = http_build_query($fields);
-            curl_setopt($ch ,CURLOPT_POST, count($fields));
-            curl_setopt($ch ,CURLOPT_POSTFIELDS, $fields_string);
-    }
-echo "".$token;
-$headers = array(
-'Authorization: bearer ' + $token,
-);
-curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-curl_setopt($ch, CURLOPT_FOLLOWLOCATION,1);
-    curl_setopt($ch, CURLOPT_USERAGENT,$UA);
-    $result = curl_exec($ch);
-    curl_close($ch);
-    return $result;
 
-}
+
 function getToken($length){
     global $conn;
     $token = "";
@@ -79,7 +56,7 @@ if ( isset($_GET['path']) ) {
         if (!isset($_GET["code"]))
         {
             $_SESSION['redirect_uri'] = $_SERVER['HTTP_REFERER'];
-            $_SESSION['state'] = $state;
+            $_SESSION['state'] = md5(uniqid);
             $authUrl = $client->getAuthenticationUrl($authorizeUrl, $redirectUrl, array("scope" => "identity", "state" => md5(uniqid)));
             header("Location: ".$authUrl);
             die("Redirect");
@@ -281,6 +258,8 @@ Giveaways have the option to apply restrictions like karma and account age<br><b
 These are FIRST COME FIRST SERVED giveaway, with no random giveaway<br><br>
 The person who has created the giveaway is able to see the reddit account of who claimed it.<br><br>
 You are more than welcome to use this on other subs and not limited to r/GameDeals<br><br>
+<small>please also note, this is not officially linked to r/GameDeals or any other sub in any manner</small><br>
+<small>the site is not responsible for any incorrect keys submitted, if there is any abuse, please report it to me directly on reddit</small>
 <br><br><br><br><br><br>
 <small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br><br>
 <?php
@@ -370,9 +349,10 @@ while ( $row = $result->fetch_assoc() ) {
 
 </div>
 
-
 <div id="footer" style="color: black;">created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> for the caring users of <a href="https://reddit.com/r/GameDeals" target="_blank">r/GameDeals</a> who love to share their game keys - <small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br>
-this is a free service, if you wish to donote, please do via <a href="https://ko-fi.com/dgc1980">Ko-fi</a> or BTC 33gAxQGTW84CmoskiuZdnMTtAqKaCQG8Pz
+<?php /*
+    this is a free service, if you wish to donote, please do via <a href="https://ko-fi.com/dgc1980">Ko-fi</a> or BTC 33gAxQGTW84CmoskiuZdnMTtAqKaCQG8Pz
+*/ ?>
 </div>
 
 <script src="/cookie/load.js"></script>
