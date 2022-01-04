@@ -14,7 +14,7 @@ function geturl($url,$token) {
             $fields_string = http_build_query($fields);
             curl_setopt($ch ,CURLOPT_POST, count($fields));
             curl_setopt($ch ,CURLOPT_POSTFIELDS, $fields_string);
-    } //"Authorization": "bearer fhTdafZI-0ClEzzYORfBSCR7x3M"
+    }
 echo "".$token;
 $headers = array(
 'Authorization: bearer ' + $token,
