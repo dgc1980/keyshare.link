@@ -80,7 +80,6 @@ if ( isset($_GET['path']) ) {
                 $_SESSION['karma_link'] = $response['result']['link_karma'];
                 $_SESSION['karma_comment'] = $response['result']['comment_karma'];
                 $_SESSION['account_age'] = intval((time() - intval($response['result']['created_utc'])) / 86400);
-                file_put_contents('a.txt', print_r($response,1));
             } else {
             }
         }
