@@ -3,16 +3,16 @@ session_start();
 include('database.inc.php'); //database connection
 require_once('config.inc.php'); //reddit and hcaptcha config
 function uniqidReal($lenght = 13) {
-        // uniqid gives 13 chars, but you could adjust it to your needs.
-        if (function_exists("random_bytes")) {
-            $bytes = random_bytes(ceil($lenght / 2));
-        } elseif (function_exists("openssl_random_pseudo_bytes")) {
-            $bytes = openssl_random_pseudo_bytes(ceil($lenght / 2));
-        } else {
-            throw new Exception("no cryptographically secure random function available");
-        }
-        return substr(bin2hex($bytes), 0, $lenght);
+    // uniqid gives 13 chars, but you could adjust it to your needs.
+    if (function_exists("random_bytes")) {
+        $bytes = random_bytes(ceil($lenght / 2));
+    } elseif (function_exists("openssl_random_pseudo_bytes")) {
+        $bytes = openssl_random_pseudo_bytes(ceil($lenght / 2));
+    } else {
+        throw new Exception("no cryptographically secure random function available");
     }
+    return substr(bin2hex($bytes), 0, $lenght);
+}
 
 
 function getToken($length){
@@ -32,7 +32,7 @@ function getToken($length){
         $result = $conn->query($sql);
         $data =  $result->fetch_assoc();
 
-        $tt = $data['total'];
+        $tt = $data['count(*)'];
 
     }
     return $token;
@@ -67,8 +67,8 @@ if ( isset($_GET['path']) ) {
         if (!isset($_GET["code"]))
         {
             $_SESSION['redirect_uri'] = $_SERVER['HTTP_REFERER'];
-            $_SESSION['state'] = md5(uniqid);
-            $authUrl = $client->getAuthenticationUrl($authorizeUrl, $redirectUrl, array("scope" => "identity", "state" => md5(uniqid)));
+            $_SESSION['state'] = md5($state);
+            $authUrl = $client->getAuthenticationUrl($authorizeUrl, $redirectUrl, array("scope" => "identity", "state" => md5($state)));
             header("Location: ".$authUrl);
             die("Redirect");
         }
@@ -140,8 +140,13 @@ if ( $path[0] == "claim" ) {
               $s = 0;
           }
 
-
-
+          $sql = "SELECT count(*) from ratelimit where who = '".$_SESSION['username']."' AND lastclaim > ".(time()-300).";";
+          $result = $conn->query($sql);
+          $data =  $result->fetch_assoc();
+          if ($data['count(*)'] > 0) {
+            header("Location: /too-many" );
+            die("Redirect");
+          }
           if ( $s == 1) {
             if (!preg_match('/[^A-Za-z0-9]/', $path[1])) // '/[^a-z\d]/i' should also work.
             {
@@ -157,6 +162,19 @@ if ( $path[0] == "claim" ) {
                     $result = $conn->query($sql);
                     $sql = "UPDATE gamekeys SET dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
                     $result = $conn->query($sql);
+
+
+                    $sql = "SELECT count(*) from ratelimit where who = '".$_SESSION['username']."';";
+                    $result = $conn->query($sql);
+                    $data =  $result->fetch_assoc();
+                    if ( $data['count(*)'] > 0 ) {
+                        $sql = "UPDATE ratelimit SET lastclaim = ".time()." WHERE who = '".$_SESSION['username']."';";
+                        $result = $conn->query($sql);
+                    } else {
+                        $sql = "INSERT INTO ratelimit (who,lastclaim) VALUES ('".$_SESSION['username']."',".time().");";
+                        //echo $sql;
+                        $result = $conn->query($sql);
+                    }
                 }
                 header("Location: /k/".$path[1] );
                 die("Redirect");
@@ -261,7 +279,13 @@ if ( $path[0] == "newkey" ) {
     }
 }
 
-
+if ( $path[0] == "too-many" ){
+?>
+Thank you for your interest in this key<br>
+But unfortunately there is a limit of 1 key per 5 minutes<br>
+To give everyone a fair chance to get keys.
+<?php
+}
 
 if ( $path[0] == "" ) {
 ?>
