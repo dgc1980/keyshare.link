@@ -1,6 +1,8 @@
 <?php
 session_start();
 include('database.inc.php'); //database connection
+include('Parsedown.php');
+$Parsedown = new Parsedown();
 require_once('config.inc.php'); //reddit and hcaptcha config
 function uniqidReal($lenght = 13) {
     // uniqid gives 13 chars, but you could adjust it to your needs.
@@ -156,11 +158,7 @@ if ( $path[0] == "claim" ) {
                 $row = $result->fetch_assoc();
 
                 if ($row['claimed'] == 0) {
-                    $sql = "UPDATE gamekeys SET claimed = 1 WHERE hash = '".$path[1]."';";
-                    $result = $conn->query($sql);
-                    $sql = "UPDATE gamekeys SET reddit_who = '".$_SESSION['username']."' WHERE hash = '".$path[1]."';";
-                    $result = $conn->query($sql);
-                    $sql = "UPDATE gamekeys SET dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
+                    $sql = "UPDATE gamekeys SET claimed = 1, reddit_who = '".$_SESSION['username']."', dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
                     $result = $conn->query($sql);
 
 
@@ -288,18 +286,7 @@ To give everyone a fair chance to get keys.
 }
 
 if ( $path[0] == "" ) {
-?>
-Thank you for visiting KeyShare<br><br>
-I have created this site to help users share their game keys without worry of bots collecting them<br><br>
-Giveaways have the option to apply restrictions like karma and account age<br><br>
-These are FIRST COME FIRST SERVED giveaway, with no random giveaway<br><br>
-The person who has created the giveaway is able to see the reddit account of who claimed it.<br><br>
-You are more than welcome to use this on other subs and not limited to r/GameDeals<br><br>
-<small>please also note, this is not officially linked to r/GameDeals or any other sub in any manner</small><br>
-<small>the site is not responsible for any incorrect keys submitted, if there is any abuse, please report it to me directly on reddit</small>
-<br><br><br><br><br><br>
-<small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br><br>
-<?php
+    echo $Parsedown->text(file_get_contents('about.md')) ;
 }
 if ( $path[0] == "profile" ) {
     if ($loggedin == true) {

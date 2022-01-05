@@ -29,3 +29,5 @@ features of the site are:
 includes the following projects
 
 Light PHP wrapper for the OAuth 2.0 protocol. https://github.com/adoy/PHP-OAuth2
+
+ParseDown https://github.com/erusev/parsedown
