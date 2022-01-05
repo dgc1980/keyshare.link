@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 04, 2022 at 12:41 AM
+-- Generation Time: Jan 05, 2022 at 01:34 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.3.33
 
@@ -46,6 +46,20 @@ CREATE TABLE `gamekeys` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `ratelimit`
+--
+
+CREATE TABLE `ratelimit` (
+  `id` int(11) NOT NULL,
+  `who` text NOT NULL,
+  `lastclaim` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
 --
 -- Indexes for dumped tables
 --
@@ -57,6 +71,12 @@ ALTER TABLE `gamekeys`
   ADD PRIMARY KEY (`id`);
 
 --
+-- Indexes for table `ratelimit`
+--
+ALTER TABLE `ratelimit`
+  ADD PRIMARY KEY (`id`);
+
+--
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -64,7 +84,13 @@ ALTER TABLE `gamekeys`
 -- AUTO_INCREMENT for table `gamekeys`
 --
 ALTER TABLE `gamekeys`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
+
+--
+-- AUTO_INCREMENT for table `ratelimit`
+--
+ALTER TABLE `ratelimit`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
