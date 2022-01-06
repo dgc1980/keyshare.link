@@ -20,7 +20,8 @@ function uniqidReal($lenght = 13) {
 function getToken($length){
     global $conn;
     $token = "";
-    //$codeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    $codeAlphabet = "";
+    //$codeAlphabet.= "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     $codeAlphabet.= "abcdefghijklmnopqrstuvwxyz";
     $codeAlphabet.= "0123456789";
     $max = strlen($codeAlphabet);
@@ -33,8 +34,8 @@ function getToken($length){
         $sql = "SELECT COUNT(*) FROM gamekeys WHERE 'hash' = '".$token."';";
         $result = $conn->query($sql);
         $data =  $result->fetch_assoc();
-
-        $tt = $data['count(*)'];
+        $tt=0;
+        if (isset($data['count(*)'])) $tt = $data['count(*)'];
 
     }
     return $token;
@@ -52,7 +53,7 @@ if ( isset($_GET['path']) ) {
         die("Redirect");
     }
     if ( $path[0] == "login" ) {
-        if ( isset($_GET["code"]) AND preg_match('/[^A-Za-z0-9_]/', $path[1])) { 
+        if ( isset($_GET["code"]) AND preg_match('/[^A-Za-z0-9_-]/', $_GET['code'])) { 
             $code = $_GET['code'];
         }
         $redirectUrl = "https://keyshare.link/login";
@@ -119,6 +120,25 @@ if (isset($_SESSION['loggedin'])) {
 }
 if ( $loggedin != true ) { $loginurl = "/login"; }
 
+if ( $path[0] == "profile" and isset($path[1]) and $path[1] == "delete" and $loggedin == true) {
+    if (!preg_match('/[^A-Za-z0-9]/', $path[2])) // '/[^a-z\d]/i' should also work.
+    {
+
+        $stmt = $conn->prepare("SELECT * FROM gamekeys WHERE hash = ?;");
+        $stmt->bind_param("s", $path[2]);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $row = $result->fetch_assoc();
+
+        if ( $row['claimed'] == 0 and $_SESSION['username'] == $row['reddit_owner'] ) {
+            $stmt = $conn->prepare("DELETE FROM gamekeys WHERE hash = ?;");
+            $stmt->bind_param("s", $path[2]);
+            $stmt->execute();
+        }
+    }
+    header("Location: /profile" );
+    die("Redirect");
+}
 
 if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
@@ -325,6 +345,7 @@ if ( $path[0] == "profile" ) {
         <th scope="col">Karma/Comment/Age</th>
         <th scope="col">Claimed</th>
         <th scope="col">Link</th>
+        <th scope="col">Delete</th>
       </tr>
     </thead>
     <tbody>
@@ -347,7 +368,15 @@ while ( $row = $result->fetch_assoc() ) {
         <td><input value="https://keyshare.link/k/<?php echo $row['hash']; ?>" class="form-control form-control-sm"></td>
 */ ?>
         <td><a href="https://keyshare.link/k/<?php echo $row['hash']; ?>">https://keyshare.link/k/<?php echo $row['hash']; ?></a></td>
-
+        <td><?php
+        if ( !isset($path[1]) or $path[1] != "claimed") {
+            ?>
+            <form action="/profile/delete/<?php echo $row['hash']; ?>" method="POST">
+            <input type="submit" name="delete" value="delete">
+            </form>
+            <?php
+        } else { echo "&nbsp;"; }
+        ?></td>
     </tr>
 <?php
     }
