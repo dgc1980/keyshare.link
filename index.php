@@ -52,7 +52,9 @@ if ( isset($_GET['path']) ) {
         die("Redirect");
     }
     if ( $path[0] == "login" ) {
-        $code = $_GET['code'];
+        if ( isset($_GET["code"]) ) { 
+            $code = $_GET['code'];
+        }
         $redirectUrl = "https://keyshare.link/login";
         $authorizeUrl = 'https://ssl.reddit.com/api/v1/authorize';
         $accessTokenUrl = 'https://ssl.reddit.com/api/v1/access_token';
@@ -111,7 +113,10 @@ if ( isset($_GET['path']) ) {
 }
 unset($_SESSION['redirect_uri']);
 
-$loggedin = $_SESSION['loggedin'];
+$loggedin = false;
+if (isset($_SESSION['loggedin'])) {
+    $loggedin = $_SESSION['loggedin'];
+}
 if ( $loggedin != true ) { $loginurl = "/login"; }
 
 
@@ -219,7 +224,7 @@ if ( $path[0] == "claim" ) {
       </li>
     </ul>
     <ul class="navbar-nav">
-<?php if ( $_SESSION['loggedin'] == true ) { ?>
+<?php if ( isset($_SESSION['loggedin']) and $_SESSION['loggedin'] == true ) { ?>
     <li class="nav-item">
     <a class="nav-link" href="/profile"><?php echo $_SESSION['username']; ?></a>
       </li>
@@ -254,7 +259,7 @@ if ( $path[0] == "newkey" ) {
     </div>
 
     <div class="form-group">
-      <label for="InputGameKey" class="form-label mt-4">Game Key</label>
+      <label for="InputGameKey" class="form-label mt-4">Game Key, separate multiple keys with a space</label>
       <input type="GameKey" class="form-control" id="InputGameKey" name="InputGameKey" placeholder="ABCDE-12345-ABCDE">
     </div>
 
@@ -294,7 +299,9 @@ if ( $path[0] == "" ) {
 }
 if ( $path[0] == "profile" ) {
     if ($loggedin == true) {
-        ?>
+      ?>
+
+    <a href="/profile">Unclaimed Keys</a> | <a href="/profile/claimed">Claimed Keys</a>
     <table class="table table-hover">
     <thead>
       <tr>
@@ -307,7 +314,11 @@ if ( $path[0] == "profile" ) {
     </thead>
     <tbody>
 <?php
-$sql = "SELECT * FROM gamekeys WHERE reddit_owner = '".$_SESSION['username']."'";
+        //default unclaimed
+        $sql = "SELECT * FROM gamekeys WHERE reddit_owner = '".$_SESSION['username']."' AND claimed = 0;";
+        if ( isset($path[1]) and $path[1] == "claimed") {
+            $sql = "SELECT * FROM gamekeys WHERE reddit_owner = '".$_SESSION['username']."' AND claimed = 1;";
+        }
 $result = $conn->query($sql);
 
 while ( $row = $result->fetch_assoc() ) {
@@ -317,8 +328,12 @@ while ( $row = $result->fetch_assoc() ) {
         <td><?php echo $row['gamekey']; ?></td>
         <td><?php echo $row['karma_link']."/".$row['karma_comment']."/".$row['account_age']; ?></td>
         <td><a href="https://reddit.com/u/<?php echo $row['reddit_who']; ?>" target="_blank"><?php echo $row['reddit_who']; ?></a></td>
+<?php /*
         <td><input value="https://keyshare.link/k/<?php echo $row['hash']; ?>" class="form-control form-control-sm"></td>
-      </tr>
+*/ ?>
+        <td><a href="https://keyshare.link/k/<?php echo $row['hash']; ?>">https://keyshare.link/k/<?php echo $row['hash']; ?></a></td>
+
+    </tr>
 <?php
     }
 ?>
@@ -339,14 +354,19 @@ while ( $row = $result->fetch_assoc() ) {
             $result = $conn->query($sql);
             $row = $result->fetch_assoc();
             if ( $row['hash'] == $path[1]) {
-                if (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND $row['dateclaimed'] > 1641324520 ))) {
-                    echo "<center>Here is your gifted key for,<br><b>".$row['gametitle']."</b>";
+                if (isset($_SESSION['username']) and (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND $row['dateclaimed'] > 1641324520 )))) {
+                    echo "<center>Here is your gifted key for,<br><h1><b>".$row['gametitle']."</b></h1>";
                     if ( $row['reddit_who'] != $_SESSION['username'] ) {
                         echo "<br><i>Warning, this key was claimed by another user<br>and may already be claimed<br>as a security measure to prevent reselling<br>the key has been revealed</i><br>";
                     } else {
                         echo "<br><b>WARNING<br>THIS KEY WILL BE REVEALED TO PUBLIC AFTER 30 MINUTES</b><br>";
                     }
-                    echo '<input value="'.$row['gamekey'].'" class="form-control form-control-sm" style="width: 300px; text-align: center;">';
+                    $keys = explode(' ',$row['gamekey']);
+                    foreach ( $keys as $k ) {
+                        if ( $k != "") {
+                            echo '<input value="'.$k.'" class="form-control form-control-sm" style="width: 300px; text-align: center;">';
+                        }
+                    }
                     echo "<br><br>This key was kindly gifted by <a href='https://reddit.com/u/".$row['reddit_owner']."' target='_blank'>u/".$row['reddit_owner']."</a>";
                     echo "<br><br>please remember to thank the user who shared this key by replying to their comment.";
                 } elseif ($row['claimed'] == 1) {
@@ -392,7 +412,7 @@ created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> 
 <script src="/cookie/load.js"></script>
 </body>
 <?php
-if ($_GET['a'] == "1") {
+if (isset($_GET['a'])) {
     print_r($_SESSION);
 }
 ?>
