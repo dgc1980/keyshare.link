@@ -52,7 +52,7 @@ if ( isset($_GET['path']) ) {
         die("Redirect");
     }
     if ( $path[0] == "login" ) {
-        if ( isset($_GET["code"]) ) { 
+        if ( isset($_GET["code"]) AND preg_match('/[^A-Za-z0-9_]/', $path[1])) { 
             $code = $_GET['code'];
         }
         $redirectUrl = "https://keyshare.link/login";
@@ -163,7 +163,7 @@ if ( $path[0] == "claim" ) {
               $s = 0;
           }
 
-          $sql = "SELECT count(*) from ratelimit where who = '".$_SESSION['username']."' AND lastclaim > ".(time()-300).";";
+          $sql = "SELECT count(*) from ratelimit where who = '".addslashes($_SESSION['username'])."' AND lastclaim > ".(time()-300).";";
           $result = $conn->query($sql);
           $data =  $result->fetch_assoc();
           if ($data['count(*)'] > 0) {
@@ -174,23 +174,26 @@ if ( $path[0] == "claim" ) {
             if (!preg_match('/[^A-Za-z0-9]/', $path[1])) // '/[^a-z\d]/i' should also work.
             {
 
-                $sql = "SELECT * FROM gamekeys WHERE hash = '".$path[1]."'";
-                $result = $conn->query($sql);
+                $stmt = $conn->prepare("SELECT * FROM gamekeys WHERE hash = ?;");
+                $stmt->bind_param("s", $path[1]);
+                $stmt->execute();
+                $result = $stmt->get_result();
+
                 $row = $result->fetch_assoc();
 
                 if ($row['claimed'] == 0) {
-                    $sql = "UPDATE gamekeys SET claimed = 1, reddit_who = '".$_SESSION['username']."', dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
+                    $sql = "UPDATE gamekeys SET claimed = 1, reddit_who = '".addslashes($_SESSION['username'])."', dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
                     $result = $conn->query($sql);
 
 
-                    $sql = "SELECT count(*) from ratelimit where who = '".$_SESSION['username']."';";
+                    $sql = "SELECT count(*) from ratelimit where who = '".addslashes($_SESSION['username'])."';";
                     $result = $conn->query($sql);
                     $data =  $result->fetch_assoc();
                     if ( $data['count(*)'] > 0 ) {
-                        $sql = "UPDATE ratelimit SET lastclaim = ".time()." WHERE who = '".$_SESSION['username']."';";
+                        $sql = "UPDATE ratelimit SET lastclaim = ".time()." WHERE who = '".addslashes($_SESSION['username'])."';";
                         $result = $conn->query($sql);
                     } else {
-                        $sql = "INSERT INTO ratelimit (who,lastclaim) VALUES ('".$_SESSION['username']."',".time().");";
+                        $sql = "INSERT INTO ratelimit (who,lastclaim) VALUES ('".addslashes($_SESSION['username'])."',".time().");";
                         //echo $sql;
                         $result = $conn->query($sql);
                     }
@@ -362,8 +365,10 @@ while ( $row = $result->fetch_assoc() ) {
     if ( $path[0] == "k" ) {
         if (!preg_match('/[^A-Za-z0-9]/', $path[1])) // '/[^a-z\d]/i' should also work.
         {
-            $sql = "SELECT * FROM gamekeys WHERE hash = '".$path[1]."'";
-            $result = $conn->query($sql);
+            $stmt = $conn->prepare("SELECT * FROM gamekeys WHERE hash = ?;");
+            $stmt->bind_param("s", $path[1]);
+            $stmt->execute();
+            $result = $stmt->get_result();
             $row = $result->fetch_assoc();
             if ( $row['hash'] == $path[1]) {
                 if (isset($_SESSION['username']) and (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND $row['dateclaimed'] > 1641324520 )))) {
@@ -424,7 +429,4 @@ created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> 
 <script src="/cookie/load.js"></script>
 </body>
 <?php
-if (isset($_GET['a'])) {
-    print_r($_SESSION);
-}
 ?>
