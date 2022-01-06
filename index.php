@@ -96,7 +96,11 @@ if ( isset($_GET['path']) ) {
             } else {
             }
         }
-        header("Location: ".$_SESSION['redirect_uri']);
+        if ($_SESSION['redirect_uri']=="") {
+            header("Location: https://keyshare.link/");
+        } else {
+            header("Location: ".$_SESSION['redirect_uri']);
+        }
         $_SESSION['redirect_uri'] = "";
         die("Redirect");
     } else {
@@ -198,7 +202,7 @@ if ( $path[0] == "claim" ) {
     <script src='https://www.hCaptcha.com/1/api.js' async defer></script>
 </head>
 
-<body style="text-align: center">
+<body style="text-align: center" class="Site">
 
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
@@ -378,11 +382,12 @@ while ( $row = $result->fetch_assoc() ) {
 
 </div>
 
-<div id="footer" style="color: black;">created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> for the caring users of <a href="https://reddit.com/r/GameDeals" target="_blank">r/GameDeals</a> who love to share their game keys - <small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br>
-<?php /*
-    this is a free service, if you wish to donote, please do via <a href="https://ko-fi.com/dgc1980">Ko-fi</a> or BTC 33gAxQGTW84CmoskiuZdnMTtAqKaCQG8Pz
-*/ ?>
+
+<div id="footer" style="color: black;">
+created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> for the caring users of <a href="https://reddit.com/r/GameDeals" target="_blank">r/GameDeals</a> who love to share their game keys - <small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br>
 </div>
+<?php /*
+*/ ?>
 
 <script src="/cookie/load.js"></script>
 </body>
