@@ -16,7 +16,7 @@ You are more than welcome to use this on other subs and not limited to r/GameDea
 
 **Ability to add restrictions \(Minimum Link or Comment Karma and Account Age\)**
 
-**Keys will be publicly available to be viewed by other users who are logged in after 30 minutes to prevent users from storing/selling keys**
+**Keys will be publicly available to be viewed by other users who are logged in after 30 minutes for 90 minutes to prevent users from storing/selling keys**
 
 ---
 

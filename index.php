@@ -404,7 +404,7 @@ while ( $row = $result->fetch_assoc() ) {
             $result = $stmt->get_result();
             $row = $result->fetch_assoc();
             if ( $row['hash'] == $path[1]) {
-                if (isset($_SESSION['username']) and (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND $row['dateclaimed'] > 1641324520 )))) {
+                if (isset($_SESSION['username']) and (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND time() < ($row['dateclaimed'] + 7200 ) AND $row['dateclaimed'] > 1641324520 )))) {
                     echo "<center>Here is your gifted key for,<br><h1><b>".$row['gametitle']."</b></h1>";
                     if ( $row['reddit_who'] != $_SESSION['username'] ) {
                         echo "<br><i>Warning, this key was claimed by another user<br>and may already be claimed<br>as a security measure to prevent reselling<br>the key has been revealed</i><br>";
