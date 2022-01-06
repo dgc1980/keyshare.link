@@ -158,6 +158,10 @@ if ( $path[0] == "newkey" ) {
             $value_hash = $t;
             $stmt->execute();
 
+            $_SESSION['last_linkkarma'] = $value_linkcomment;
+            $_SESSION['last_commentkarma'] = $value_karmacomment;
+            $_SESSION['last_age'] = $value_accountage;
+            
             header("Location: /profile" );
             die("Redirect");
         }
@@ -300,17 +304,17 @@ if ( $path[0] == "newkey" ) {
 
     <div class="form-group">
       <label for="InputKarmaLink" class="form-label mt-4">Minimum Link Karma (0 is disabled)</label>
-      <input type="KarmaLink" class="form-control" id="InputKarmaLink" name="InputKarmaLink" placeholder="0">
+      <input type="KarmaLink" class="form-control" id="InputKarmaLink" name="InputKarmaLink" placeholder="0" <?php if (isset($_SESSION['last_linkkarma'])) { echo "value='".$_SESSION['last_linkkarma']."'"; } ?>>
     </div>
 
     <div class="form-group">
       <label for="InputKarmaComment" class="form-label mt-4">Minimum Comment Karma (0 is disabled)</label>
-      <input type="KarmaComment" class="form-control" id="InputKarmaComment" name="InputKarmaComment" placeholder="0">
+      <input type="KarmaComment" class="form-control" id="InputKarmaComment" name="InputKarmaComment" placeholder="0"<?php if (isset($_SESSION['last_commentkarma'])) { echo "value='".$_SESSION['last_commentkarma']."'"; } ?>>
     </div>
 
     <div class="form-group">
       <label for="InputAccountAge" class="form-label mt-4">Minimum Account Age is Days (0 is disabled)</label>
-      <input type="AccountAge" class="form-control" id="InputAccountAge" name="InputAccountAge" placeholder="0">
+      <input type="AccountAge" class="form-control" id="InputAccountAge" name="InputAccountAge" placeholder="0" <?php if (isset($_SESSION['last_age'])) { echo "value='".$_SESSION['last_age']."'"; } ?>>
     </div>
 
     <button type="submit" class="btn btn-primary" name="submit" value="1">Submit</button>
