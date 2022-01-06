@@ -122,10 +122,22 @@ if ( $loggedin != true ) { $loginurl = "/login"; }
 
 if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
-        if ($_POST['submit'] == 1) {
+        if (isset($_POST['submit']) and $_POST['submit'] == 1) {
             $t = getToken(8);
-            $sql = "INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash) VALUES ('".addslashes(htmlentities($_POST['InputGameTitle']))."','".addslashes(htmlentities($_POST['InputGameKey']))."','".time()."',1,1,'".addslashes($_SESSION['username'])."',".intval($_POST['InputKarmaLink']).",".intval($_POST['InputKarmaComment']).",".intval($_POST['InputAccountAge']).",'".$t."');";
-            $result = $conn->query($sql);
+            $stmt = $conn->prepare("INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash) VALUES (?,?,?,?,?,?,?,?,?,?);");
+            $stmt->bind_param("ssiiisiiis", $value_gametitle, $value_gamekey, $value_dateadded, $value_captcha, $value_reddit, $value_reddit_owner, $value_karmalink, $value_karmacomment, $value_accountage, $value_hash);
+            $value_gametitle = htmlentities($_POST['InputGameTitle']);
+            $value_gamekey = htmlentities($_POST['InputGameKey']);
+            $value_dateadded = time();
+            $value_captcha = 1;
+            $value_reddit = 1;
+            $value_reddit_owner = $_SESSION['username'];
+            $value_karmalink = intval($_POST['InputKarmaLink']);
+            $value_karmacomment = intval($_POST['InputKarmaComment']);
+            $value_accountage = intval($_POST['InputAccountAge']);
+            $value_hash = $t;
+            $stmt->execute();
+
             header("Location: /profile" );
             die("Redirect");
         }
@@ -205,6 +217,7 @@ if ( $path[0] == "claim" ) {
     <script src="https://code.jquery.com/jquery-1.12.4.min.js" integrity="sha384-nvAa0+6Qg9clwYCGGPpDQLVpLNn0fRaROjHqs13t4Ggj3Ez50XnGQqc/r8MhnRDZ" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js" integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV" crossorigin="anonymous"></script>
     <script src='https://www.hCaptcha.com/1/api.js' async defer></script>
+    <title>KeyShare.link - Platform for sharing unused game keys on reddit</title>
 </head>
 
 <body style="text-align: center" class="Site">
@@ -244,8 +257,7 @@ if ( $path[0] == "claim" ) {
 
   </div>
 </nav>
-<br><br><br>
-<div class="container">
+<div class="container" style="margin-top: 80px;">
 
 <?php
 if ( $path[0] == "newkey" ) {
