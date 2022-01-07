@@ -129,7 +129,6 @@ if ( $path[0] == "profile" and isset($path[1]) and $path[1] == "delete" and $log
         $stmt->execute();
         $result = $stmt->get_result();
         $row = $result->fetch_assoc();
-
         if ( $row['claimed'] == 0 and $_SESSION['username'] == $row['reddit_owner'] ) {
             $stmt = $conn->prepare("DELETE FROM gamekeys WHERE hash = ?;");
             $stmt->bind_param("s", $path[2]);
@@ -144,8 +143,8 @@ if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
         if (isset($_POST['submit']) and $_POST['submit'] == 1) {
             $t = getToken(8);
-            $stmt = $conn->prepare("INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash) VALUES (?,?,?,?,?,?,?,?,?,?);");
-            $stmt->bind_param("ssiiisiiis", $value_gametitle, $value_gamekey, $value_dateadded, $value_captcha, $value_reddit, $value_reddit_owner, $value_karmalink, $value_karmacomment, $value_accountage, $value_hash);
+            $stmt = $conn->prepare("INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash,startdate) VALUES (?,?,?,?,?,?,?,?,?,?,?);");
+            $stmt->bind_param("ssiiisiiisi", $value_gametitle, $value_gamekey, $value_dateadded, $value_captcha, $value_reddit, $value_reddit_owner, $value_karmalink, $value_karmacomment, $value_accountage, $value_hash, $value_startdate);
             $value_gametitle = htmlentities($_POST['InputGameTitle']);
             $value_gamekey = htmlentities($_POST['InputGameKey']);
             $value_dateadded = time();
@@ -156,6 +155,10 @@ if ( $path[0] == "newkey" ) {
             $value_karmacomment = intval($_POST['InputKarmaComment']);
             $value_accountage = intval($_POST['InputAccountAge']);
             $value_hash = $t;
+            $value_startdate = 0;
+            if ( isset($_POST['InputStartDate'])) {
+                $value_startdate = strtotime($_POST['InputStartDate']);
+            }
             $stmt->execute();
 
             $_SESSION['last_linkkarma'] = $value_linkcomment;
@@ -202,10 +205,9 @@ if ( $path[0] == "claim" ) {
                 $stmt->bind_param("s", $path[1]);
                 $stmt->execute();
                 $result = $stmt->get_result();
-
                 $row = $result->fetch_assoc();
 
-                if ($row['claimed'] == 0) {
+                if ($row['claimed'] == 0 and time() > $row['startdate']) {
                     $sql = "UPDATE gamekeys SET claimed = 1, reddit_who = '".addslashes($_SESSION['username'])."', dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
                     $result = $conn->query($sql);
 
@@ -303,6 +305,11 @@ if ( $path[0] == "newkey" ) {
     </div>
 
     <div class="form-group">
+      <label for="InputStartDate" class="form-label mt-4">Start Date/Time for Giveaway "+30 minutes", "+1 day", "10am Feb 20 2022 GMT"</label>
+      <input type="StartDate" class="form-control" id="InputStartDate" name="InputStartDate" placeholder="NOW">
+    </div>
+
+    <div class="form-group">
       <label for="InputKarmaLink" class="form-label mt-4">Minimum Link Karma (0 is disabled)</label>
       <input type="KarmaLink" class="form-control" id="InputKarmaLink" name="InputKarmaLink" placeholder="0" <?php if (isset($_SESSION['last_linkkarma'])) { echo "value='".$_SESSION['last_linkkarma']."'"; } ?>>
     </div>
@@ -348,7 +355,8 @@ if ( $path[0] == "profile" ) {
         <th scope="col">Key</th>
         <th scope="col">Karma/Comment/Age</th>
         <th scope="col">Claimed</th>
-        <th scope="col">Link</th>
+        <th scope="col">Start Date</th>
+        <th scope="col">Delete</th>
         <th scope="col">Delete</th>
       </tr>
     </thead>
@@ -368,6 +376,14 @@ while ( $row = $result->fetch_assoc() ) {
         <td><?php echo $row['gamekey']; ?></td>
         <td><?php echo $row['karma_link']."/".$row['karma_comment']."/".$row['account_age']; ?></td>
         <td><a href="https://reddit.com/u/<?php echo $row['reddit_who']; ?>" target="_blank"><?php echo $row['reddit_who']; ?></a></td>
+
+        <td><?php
+            if($row['startdate'] > 0 ) {
+                echo gmdate("M d Y H:i:s",$row['startdate']);
+            } else { echo "&nbsp;" ;}
+
+        ?></td>
+
 <?php /*
         <td><input value="https://keyshare.link/k/<?php echo $row['hash']; ?>" class="form-control form-control-sm"></td>
 */ ?>
@@ -404,7 +420,9 @@ while ( $row = $result->fetch_assoc() ) {
             $result = $stmt->get_result();
             $row = $result->fetch_assoc();
             if ( $row['hash'] == $path[1]) {
-                if (isset($_SESSION['username']) and (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND time() < ($row['dateclaimed'] + 7200 ) AND $row['dateclaimed'] > 1641324520 )))) {
+                if ( time() < $row['startdate'] ) {
+                    echo "<center><h1>this giveaway has not yet started</h1></center>";
+                } elseif (isset($_SESSION['username']) and (($row['reddit_who'] == $_SESSION['username'] and $row['claimed'] == 1) or ( $loggedin AND (time() > ($row['dateclaimed'] + 1800 ) AND time() < ($row['dateclaimed'] + 7200 ) AND $row['dateclaimed'] > 1641324520 )))) {
                     echo "<center>Here is your gifted key for,<br><h1><b>".$row['gametitle']."</b></h1>";
                     if ( $row['reddit_who'] != $_SESSION['username'] ) {
                         echo "<br><i>Warning, this key was claimed by another user<br>and may already be claimed<br>as a security measure to prevent reselling<br>the key has been revealed</i><br>";

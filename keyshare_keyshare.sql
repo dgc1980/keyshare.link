@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 05, 2022 at 01:34 AM
+-- Generation Time: Jan 07, 2022 at 01:02 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.3.33
 
@@ -35,6 +35,7 @@ CREATE TABLE `gamekeys` (
   `gamekey` text NOT NULL,
   `dateadded` int(11) NOT NULL,
   `dateclaimed` int(11) NOT NULL DEFAULT 0,
+  `startdate` int(11) NOT NULL,
   `captcha` int(11) NOT NULL DEFAULT 1,
   `reddit` int(11) NOT NULL DEFAULT 1,
   `claimed` int(11) NOT NULL DEFAULT 0,
@@ -44,6 +45,10 @@ CREATE TABLE `gamekeys` (
   `karma_comment` int(11) NOT NULL,
   `account_age` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `gamekeys`
+--
 
 
 
@@ -58,6 +63,10 @@ CREATE TABLE `ratelimit` (
   `who` text NOT NULL,
   `lastclaim` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+--
+-- Dumping data for table `ratelimit`
+--
 
 
 --
@@ -80,18 +89,6 @@ ALTER TABLE `ratelimit`
 -- AUTO_INCREMENT for dumped tables
 --
 
---
--- AUTO_INCREMENT for table `gamekeys`
---
-ALTER TABLE `gamekeys`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
-
---
--- AUTO_INCREMENT for table `ratelimit`
---
-ALTER TABLE `ratelimit`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
-COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
