@@ -31,7 +31,7 @@ function getToken($length){
         for ($i=0; $i < $length; $i++) {
             $token .= $codeAlphabet[random_int(0, $max-1)];
         }
-        $sql = "SELECT COUNT(*) FROM gamekeys WHERE 'hash' = '".$token."';";
+        $sql = "SELECT count(*) FROM gamekeys WHERE hash = '".$token."';";
         $result = $conn->query($sql);
         $data =  $result->fetch_assoc();
         $tt=0;
@@ -49,14 +49,13 @@ if ( isset($_GET['path']) ) {
 
     if ( $path[0] == "logout" ) {
         $_SESSION['loggedin'] = false;
-        header("Location: https://keyshare.link/");
+        header("Location: https://".$_SERVER['SERVER_NAME']."/");
         die("Redirect");
     }
     if ( $path[0] == "login" ) {
         if ( isset($_GET["code"]) AND preg_match('/[^A-Za-z0-9_-]/', $_GET['code'])) { 
             $code = $_GET['code'];
         }
-        $redirectUrl = "https://keyshare.link/login";
         $authorizeUrl = 'https://ssl.reddit.com/api/v1/authorize';
         $accessTokenUrl = 'https://ssl.reddit.com/api/v1/access_token';
 
@@ -139,29 +138,95 @@ if ( $path[0] == "profile" and isset($path[1]) and $path[1] == "delete" and $log
     die("Redirect");
 }
 
+if ( $path[0] == "report") {
+    if ($loggedin == true) {
+        if (!preg_match('/[^A-Za-z0-9]/', $path[1])) {
+            $stmt = $conn->prepare("SELECT * FROM gamekeys WHERE hash = ?;");
+            $stmt->bind_param("s", $path[1]);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            if ( $_SESSION['username'] == $row['reddit_who']){
+                $stmt = $conn->prepare("UPDATE gamekeys SET reported = 1, reportreason = ? WHERE hash = ?;");
+                $stmt->bind_param("ss", $reportreason ,$path[1]);
+                $reportreason = $_POST['ReportReason'];
+                $stmt->execute();
+            }
+        }
+    }
+    header("Location: /k/".$path[1] );
+    die("Redirect");
+}
+
+if ( $path[0] == "success") {
+    if ($loggedin == true) {
+        if (!preg_match('/[^A-Za-z0-9]/', $path[1])) {
+            $stmt = $conn->prepare("SELECT * FROM gamekeys WHERE hash = ?;");
+            $stmt->bind_param("s", $path[1]);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            $row = $result->fetch_assoc();
+            if ( $_SESSION['username'] == $row['reddit_who']){
+                $stmt = $conn->prepare("UPDATE gamekeys SET worked = 1 WHERE hash = ?;");
+                $stmt->bind_param("s", $path[1]);
+                $stmt->execute();
+            }
+        }
+    }
+    header("Location: /k/".$path[1] );
+    die("Redirect");
+}
+
+
+if ( $path[0] == "profile" ) {
+    if ($loggedin == true and isset($path[1])) {
+        if ( $path[1] == "opt-out" or $path[1] == "opt-in") {
+            $sql2 = "SELECT * FROM accountprefs WHERE username = '".$_SESSION['username']."';";
+            $result2 = $conn->query($sql2);
+            $row2 =  $result2->fetch_assoc();
+            $v = 0; if ($path[1] == "opt-out") { $v =1; }
+            if ( $row2['username'] == $_SESSION['username']) {
+                $sql = "UPDATE accountprefs SET optout = ".$v." WHERE username = '".$_SESSION['username']."'";
+            } else {
+                $sql = "INSERT INTO accountprefs (username,optout) VALUES ('".$_SESSION['username']."',".$v.");";
+            }
+            $result = $conn->query($sql);
+            header("Location: /profile" );
+            die("Redirect");
+        }
+    }
+}
+
+
 if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
         if (isset($_POST['submit']) and $_POST['submit'] == 1) {
             $t = getToken(8);
             $stmt = $conn->prepare("INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash,startdate) VALUES (?,?,?,?,?,?,?,?,?,?,?);");
             $stmt->bind_param("ssiiisiiisi", $value_gametitle, $value_gamekey, $value_dateadded, $value_captcha, $value_reddit, $value_reddit_owner, $value_karmalink, $value_karmacomment, $value_accountage, $value_hash, $value_startdate);
-            $value_gametitle = htmlentities($_POST['InputGameTitle']);
-            $value_gamekey = htmlentities($_POST['InputGameKey']);
+            $value_gametitle = htmlentities(substr($_POST['InputGameTitle'],200));
+            $value_gamekey = htmlentities(substr($_POST['InputGameKey'],100));
             $value_dateadded = time();
             $value_captcha = 1;
             $value_reddit = 1;
             $value_reddit_owner = $_SESSION['username'];
             $value_karmalink = intval($_POST['InputKarmaLink']);
+            if ( $value_karmalink > 2000 ) { $value_karmalink = 2000;}
             $value_karmacomment = intval($_POST['InputKarmaComment']);
+            if ( $value_karmacomment > 2000 ) { $value_karmacomment = 2000;}
             $value_accountage = intval($_POST['InputAccountAge']);
+            if ( $value_accountage > 2000 ) { $value_accountage = 2000;}
             $value_hash = $t;
             $value_startdate = 0;
             if ( isset($_POST['InputStartDate'])) {
                 $value_startdate = strtotime($_POST['InputStartDate']);
             }
+            if ($value_startdate > strtotime("NOW + 1 month")) {
+                $value_startdate = strtotime("NOW + 1 month");
+            }
             $stmt->execute();
 
-            $_SESSION['last_linkkarma'] = $value_linkcomment;
+            $_SESSION['last_linkkarma'] = $value_karmalink;
             $_SESSION['last_commentkarma'] = $value_karmacomment;
             $_SESSION['last_age'] = $value_accountage;
             
@@ -289,6 +354,68 @@ if ( $path[0] == "claim" ) {
 <div class="container" style="margin-top: 80px;">
 
 <?php
+        $sql = "SELECT count(*) FROM gamekeys WHERE claimed = 1;";
+        $result = $conn->query($sql);
+        $data =  $result->fetch_assoc();
+        $servedkeys=0;
+        if (isset($data['count(*)'])) $servedkeys = $data['count(*)'];
+        ?>
+        <div class="alert alert-dismissible alert-warning">
+        There has been a total of <strong><?php echo $servedkeys; ?></strong> keys submitted by awesome people and claimed by people in need.
+        </div>
+        <?php
+?>
+
+
+<?php
+if ( $_SERVER['SERVER_NAME'] =='staging.keyshare.link') {
+?>
+<div class="alert alert-dismissible alert-danger">
+  <strong>WARNING</strong><br>This is a staging server<br>Do not expect any keys to work.
+</div>
+
+<?php
+}
+if ( $path[0] == "top10" ) {
+    $sql = "SELECT reddit_owner, count(*) FROM gamekeys WHERE claimed = 1 AND reddit_who != reddit_owner GROUP BY reddit_owner ORDER BY count(*) DESC LIMIT 10;";
+    $result = $conn->query($sql);
+?>
+    <table class="table table-hover">
+    <thead>
+      <tr>
+        <th scope="col">Gifter</th>
+        <th scope="col">Count</th>
+      </tr>
+    </thead>
+    <tbody>
+<?php
+    while( $row =  $result->fetch_assoc() ) {
+        $sql2 = "SELECT * FROM accountprefs WHERE username = '".$row['reddit_owner']."';";
+        $result2 = $conn->query($sql2);
+        $row2 =  $result2->fetch_assoc();
+        $username = $row['reddit_owner'];
+        if ($row2['optout'] == 1) { $username = "Anonymous"; }
+    ?>
+      <tr>
+        <td>
+            <?php if ( $row2['optout'] == 1 ) { ?>
+            <?php echo $username; ?>
+            <?php } else { ?>
+            <a href="https://reddit.com/u/<?php echo $username; ?>" target="_blank">u/<?php echo $username; ?></a>
+            <?php } ?>
+        </td>
+        <td><?php echo $row['count(*)']; ?></td>
+      </tr>
+    <?php
+    }
+    ?>
+    </tbody>
+    </table>
+    <?php
+}
+
+
+
 if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
 ?>
@@ -296,31 +423,31 @@ if ( $path[0] == "newkey" ) {
   <fieldset>
     <div class="form-group">
       <label for="InputGameTitle" class="form-label mt-4">Game Title</label>
-      <input type="GameTitle" class="form-control" id="InputGameTitle" name="InputGameTitle" placeholder="Game Title">
+      <input type="GameTitle" class="form-control" id="InputGameTitle" name="InputGameTitle" placeholder="Game Title" maxlength="200">
     </div>
 
     <div class="form-group">
       <label for="InputGameKey" class="form-label mt-4">Game Key, separate multiple keys with a space</label>
-      <input type="GameKey" class="form-control" id="InputGameKey" name="InputGameKey" placeholder="ABCDE-12345-ABCDE">
+      <input type="GameKey" class="form-control" id="InputGameKey" name="InputGameKey" placeholder="ABCDE-12345-ABCDE" maxlength="100">
     </div>
 
     <div class="form-group">
-      <label for="InputStartDate" class="form-label mt-4">Start Date/Time for Giveaway "+30 minutes", "+1 day", "10am Feb 20 2022 GMT"</label>
+      <label for="InputStartDate" class="form-label mt-4">Start Date/Time for Giveaway "+30 minutes", "+1 day", "10am Feb 20 2022 GMT", Maximum of 1 Month in the future.</label>
       <input type="StartDate" class="form-control" id="InputStartDate" name="InputStartDate" placeholder="NOW">
     </div>
 
     <div class="form-group">
-      <label for="InputKarmaLink" class="form-label mt-4">Minimum Link Karma (0 is disabled)</label>
+      <label for="InputKarmaLink" class="form-label mt-4">Minimum Link Karma (0 is disabled) - Max 2000</label>
       <input type="KarmaLink" class="form-control" id="InputKarmaLink" name="InputKarmaLink" placeholder="0" <?php if (isset($_SESSION['last_linkkarma'])) { echo "value='".$_SESSION['last_linkkarma']."'"; } ?>>
     </div>
 
     <div class="form-group">
-      <label for="InputKarmaComment" class="form-label mt-4">Minimum Comment Karma (0 is disabled)</label>
+      <label for="InputKarmaComment" class="form-label mt-4">Minimum Comment Karma (0 is disabled) - Max 2000</label>
       <input type="KarmaComment" class="form-control" id="InputKarmaComment" name="InputKarmaComment" placeholder="0"<?php if (isset($_SESSION['last_commentkarma'])) { echo "value='".$_SESSION['last_commentkarma']."'"; } ?>>
     </div>
 
     <div class="form-group">
-      <label for="InputAccountAge" class="form-label mt-4">Minimum Account Age is Days (0 is disabled)</label>
+      <label for="InputAccountAge" class="form-label mt-4">Minimum Account Age is Days (0 is disabled) - Max 2000</label>
       <input type="AccountAge" class="form-control" id="InputAccountAge" name="InputAccountAge" placeholder="0" <?php if (isset($_SESSION['last_age'])) { echo "value='".$_SESSION['last_age']."'"; } ?>>
     </div>
 
@@ -345,7 +472,8 @@ if ( $path[0] == "" ) {
 }
 if ( $path[0] == "profile" ) {
     if ($loggedin == true) {
-      ?>
+
+        ?>
 
     <a href="/profile">Unclaimed Keys</a> | <a href="/profile/claimed">Claimed Keys</a>
     <table class="table table-hover">
@@ -356,7 +484,7 @@ if ( $path[0] == "profile" ) {
         <th scope="col">Karma/Comment/Age</th>
         <th scope="col">Claimed</th>
         <th scope="col">Start Date</th>
-        <th scope="col">Delete</th>
+        <th scope="col">Link</th>
         <th scope="col">Delete</th>
       </tr>
     </thead>
@@ -387,7 +515,7 @@ while ( $row = $result->fetch_assoc() ) {
 <?php /*
         <td><input value="https://keyshare.link/k/<?php echo $row['hash']; ?>" class="form-control form-control-sm"></td>
 */ ?>
-        <td><a href="https://keyshare.link/k/<?php echo $row['hash']; ?>">https://keyshare.link/k/<?php echo $row['hash']; ?></a></td>
+        <td><a href="https://<?php echo $_SERVER['SERVER_NAME']; ?>/k/<?php echo $row['hash']; ?>">https://<?php echo $_SERVER['SERVER_NAME']; ?>/k/<?php echo $row['hash']; ?></a></td>
         <td><?php
         if ( !isset($path[1]) or $path[1] != "claimed") {
             ?>
@@ -403,8 +531,19 @@ while ( $row = $result->fetch_assoc() ) {
 ?>
     </tbody>
 </table>
-<a href="/newkey">Create New Giveaway</a>
+<a href="/newkey">Create New Giveaway</a><br><br>
 <?php
+        $sql2 = "SELECT * FROM accountprefs WHERE username = '".$_SESSION['username']."';";
+        $result2 = $conn->query($sql2);
+        $row2 =  $result2->fetch_assoc();
+        if ( $row2['optout'] == 1) { ?>
+            <a href="/profile/opt-in">Opt-in to displaying username in Top10</a><br><br>
+        <?php } else { ?>
+            <a href="/profile/opt-out">Opt-out to displaying username in Top10</a><br><br>
+        <?php } 
+
+
+
     }
 
 
@@ -437,8 +576,32 @@ while ( $row = $result->fetch_assoc() ) {
                     }
                     echo "<br><br>This key was kindly gifted by <a href='https://reddit.com/u/".$row['reddit_owner']."' target='_blank'>u/".$row['reddit_owner']."</a>";
                     echo "<br><br>please remember to thank the user who shared this key by replying to their comment.";
-                } elseif ($row['claimed'] == 1) {
-                    echo "key already claimed by another user";
+                    
+                    if ($_SESSION['username'] == $row['reddit_who']) {
+                        if ( ($row['reported'] == 0 and $row['worked'] == 0) AND time() < ($row['dateclaimed'] + 7200 )) {
+                            ?> <br><br>
+
+                            Did this key work?<br>
+                            <form action="/success/<?php echo $path[1]; ?>" method="POST"><input type="submit" class="btn btn-success" value="Yes &#128513;"></form><form action="/report/<?php echo $path[1]; ?>" method="POST"><input type="submit" class="btn btn-danger" value="No &#128546;">
+                            <input type="ReportReason" class="form-control" id="ReportReason" name="ReportReason" placeholder="reason for choosing No" style="width: 200px;"></form>
+                            <?php
+                        } else {
+                            if ( $row['reported'] == 1) { ?>
+                                <div class="alert alert-dismissible alert-danger">
+                                  This key has been reported we not working.
+                                </div>
+                            <?php } elseif ( $row['worked'] == 1 ) { ?>
+                                <div class="alert alert-dismissible alert-success">
+                                  This key has been marked as working.
+                                </div>
+                            <?php }
+                        }
+                    }
+
+                } elseif ($row['claimed'] == 1 and (time() < ($row['dateclaimed'] + 1800 ))) {
+                    echo "it has not been 30 minutes since this key was claimed<br>please check back again soon to see if the user has redeemed the key.";
+                } elseif ($row['claimed'] == 1 and (time() > ($row['dateclaimed'] + 7200 ))) {
+                    echo "key already claimed by another user<br>and is past the security reveal time.";
                 } else {
                     if ($row['reddit'] == 1 and $loggedin == false) {
                         echo "this key requires you to be logged in to claim it";
@@ -469,7 +632,6 @@ while ( $row = $result->fetch_assoc() ) {
 ?>
 
 </div>
-
 
 <div id="footer" style="color: black;">
 created by <a href="https://reddit.com/u/dgc1980" target="_blank">u/dgc1980</a> for the caring users of <a href="https://reddit.com/r/GameDeals" target="_blank">r/GameDeals</a> who love to share their game keys - <small><a href='https://github.com/dgc1980/keyshare.link'>source code</a></small><br>

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 07, 2022 at 01:02 AM
+-- Generation Time: Jan 09, 2022 at 03:07 AM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.3.33
 
@@ -25,6 +25,20 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `accountprefs`
+--
+
+CREATE TABLE `accountprefs` (
+  `id` int(11) NOT NULL,
+  `username` text NOT NULL,
+  `optout` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `gamekeys`
 --
 
@@ -41,15 +55,14 @@ CREATE TABLE `gamekeys` (
   `claimed` int(11) NOT NULL DEFAULT 0,
   `reddit_who` text NOT NULL DEFAULT '',
   `reddit_owner` text NOT NULL,
+  `worked` int(11) NOT NULL,
+  `reported` int(11) NOT NULL,
+  `reportreason` text NOT NULL,
+  `checked` int(11) NOT NULL,
   `karma_link` int(11) NOT NULL,
   `karma_comment` int(11) NOT NULL,
   `account_age` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
---
--- Dumping data for table `gamekeys`
---
-
 
 
 -- --------------------------------------------------------
@@ -64,14 +77,16 @@ CREATE TABLE `ratelimit` (
   `lastclaim` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
---
--- Dumping data for table `ratelimit`
---
-
 
 --
 -- Indexes for dumped tables
 --
+
+--
+-- Indexes for table `accountprefs`
+--
+ALTER TABLE `accountprefs`
+  ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `gamekeys`
@@ -84,10 +99,6 @@ ALTER TABLE `gamekeys`
 --
 ALTER TABLE `ratelimit`
   ADD PRIMARY KEY (`id`);
-
---
--- AUTO_INCREMENT for dumped tables
---
 
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
