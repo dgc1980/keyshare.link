@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost:3306
--- Generation Time: Jan 09, 2022 at 03:07 AM
+-- Generation Time: Feb 01, 2022 at 08:24 PM
 -- Server version: 10.4.22-MariaDB
 -- PHP Version: 7.3.33
 
@@ -55,14 +55,15 @@ CREATE TABLE `gamekeys` (
   `claimed` int(11) NOT NULL DEFAULT 0,
   `reddit_who` text NOT NULL DEFAULT '',
   `reddit_owner` text NOT NULL,
-  `worked` int(11) NOT NULL,
-  `reported` int(11) NOT NULL,
-  `reportreason` text NOT NULL,
-  `checked` int(11) NOT NULL,
+  `worked` int(11) NOT NULL DEFAULT 0,
+  `reported` int(11) NOT NULL DEFAULT 0,
+  `reportreason` text NOT NULL DEFAULT '',
+  `checked` int(11) NOT NULL DEFAULT 0,
   `karma_link` int(11) NOT NULL,
   `karma_comment` int(11) NOT NULL,
   `account_age` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 
 
 -- --------------------------------------------------------
@@ -76,6 +77,7 @@ CREATE TABLE `ratelimit` (
   `who` text NOT NULL,
   `lastclaim` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
 
 
 --
@@ -99,6 +101,7 @@ ALTER TABLE `gamekeys`
 --
 ALTER TABLE `ratelimit`
   ADD PRIMARY KEY (`id`);
+
 
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

@@ -204,8 +204,8 @@ if ( $path[0] == "newkey" ) {
             $t = getToken(8);
             $stmt = $conn->prepare("INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash,startdate) VALUES (?,?,?,?,?,?,?,?,?,?,?);");
             $stmt->bind_param("ssiiisiiisi", $value_gametitle, $value_gamekey, $value_dateadded, $value_captcha, $value_reddit, $value_reddit_owner, $value_karmalink, $value_karmacomment, $value_accountage, $value_hash, $value_startdate);
-            $value_gametitle = htmlentities(substr($_POST['InputGameTitle'],200));
-            $value_gamekey = htmlentities(substr($_POST['InputGameKey'],100));
+            $value_gametitle = htmlentities(substr($_POST['InputGameTitle'],0,200));
+            $value_gamekey = htmlentities(substr($_POST['InputGameKey'],0,100));
             $value_dateadded = time();
             $value_captcha = 1;
             $value_reddit = 1;
@@ -225,6 +225,7 @@ if ( $path[0] == "newkey" ) {
                 $value_startdate = strtotime("NOW + 1 month");
             }
             $stmt->execute();
+            //if(!$stmt->execute()) { echo $stmt->error; die(); }
 
             $_SESSION['last_linkkarma'] = $value_karmalink;
             $_SESSION['last_commentkarma'] = $value_karmacomment;
@@ -376,7 +377,7 @@ if ( $_SERVER['SERVER_NAME'] =='staging.keyshare.link') {
 
 <?php
 }
-if ( $path[0] == "top10" ) {
+if ( $path[0] == "1top10" ) {
     $sql = "SELECT reddit_owner, count(*) FROM gamekeys WHERE claimed = 1 AND reddit_who != reddit_owner GROUP BY reddit_owner ORDER BY count(*) DESC LIMIT 10;";
     $result = $conn->query($sql);
 ?>
