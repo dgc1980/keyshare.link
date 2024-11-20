@@ -22,6 +22,12 @@ features of the site are:
 ---
 # Updates.
 
+20/11/2024
+
+* changed IPv6 to store /64 subnet for rate limiting.
+* added weekly limit on claiming
+
+
 15/11/2024
 
 * added the ability for submitters to ban users from their own giveaways
