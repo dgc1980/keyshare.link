@@ -1,9 +1,43 @@
 <?php
-session_start();
+require_once('config.inc.php'); //reddit and hcaptcha config
+
+ini_set('session.save_path', $config['session_path']);
+ini_set('session.gc_maxlifetime', $config['session_duration']);
+    session_start( [
+        'cookie_path' => '/',
+        'cookie_lifetime' => intval($config['session_duration']),
+        'cookie_secure' => true,
+        'cookie_httponly' => true,
+        'cookie_samesite' => 'lax',
+    ] );
+
+
+$now = time();
+if (isset($_SESSION['discard_after']) && $now > $_SESSION['discard_after']) {
+    // this session has worn out its welcome; kill it and start a brand new one
+    session_unset();
+    session_destroy();
+    session_start( [
+        'cookie_path' => '/',
+        'cookie_lifetime' => intval($config['session_duration']),
+        'cookie_secure' => true,
+        'cookie_httponly' => true,
+        'cookie_samesite' => 'lax',
+    ] );
+
+}
+
+// either new or old, it should live at most for another hour
+if ( isset($_SESSION['contributor'] ) ) {
+    $_SESSION['discard_after'] = $now + $config['session_duration'];
+} else {
+    $_SESSION['discard_after'] = $now + $config['session_duration_user'];
+}
+
 include('database.inc.php'); //database connection
 include('Parsedown.php');
+
 $Parsedown = new Parsedown();
-require_once('config.inc.php'); //reddit and hcaptcha config
 function uniqidReal($lenght = 13) {
     // uniqid gives 13 chars, but you could adjust it to your needs.
     if (function_exists("random_bytes")) {
@@ -41,7 +75,11 @@ function getToken($length){
 }
 $state = uniqidReal();
 
-
+$USERIP = $_SERVER['REMOTE_ADDR'];
+if ( strrpos( $USERIP, ':' ) ) {  // convert IPv6 to /64 subnet
+    $splitip = explode(':', $USERIP);
+    $USERIP = $splitip[0] . ':' . $splitip[1] . ':' . $splitip[2] . ':' . $splitip[3] . '::0/64';
+}
 
 if ( isset($_GET['path']) ) {
     $path = explode('/',strtolower($_GET['path']));
@@ -99,18 +137,33 @@ if ( isset($_GET['path']) ) {
             $response = $client->fetch("https://oauth.reddit.com/api/v1/me.json");
 
             if ( $response['code'] == 200 ) {
-                $_SESSION['loggedin'] = true;
+
                 $_SESSION['username'] = $response['result']['name'];
+                $_SESSION['loggedin'] = true;
                 $_SESSION['karma_link'] = $response['result']['link_karma'];
                 $_SESSION['karma_comment'] = $response['result']['comment_karma'];
                 $_SESSION['account_age'] = intval((time() - intval($response['result']['created_utc'])) / 86400);
                 
+
+                $sql = "SELECT count(*) from gamekeys where reddit_owner = '".addslashes($_SESSION['username'])."' AND claimed = 1;";
+                $result = $conn->query($sql);
+                $data =  $result->fetch_assoc();
+                if ($data['count(*)'] > 10) {
+                    $_SESSION['contributor'] = 1;
+                }
+
+                if ( isset($_SESSION['contributor'] ) ) {
+                    $_SESSION['discard_after'] = $now + $config['session_duration'];
+                } else {
+                    $_SESSION['discard_after'] = $now + $config['session_duration_user'];
+                }
+
                 if ( $response['result']['is_suspended'] == "1") { $_SESSION['karma_link'] = 0; $_SESSION['karma_comment'] = 0; $_SESSION['account_age'] =0; }
 
             } else {
             }
         }
-        if ($_SESSION['redirect_uri']=="") {
+        if ( !isset($_SESSION['redirect_uri']) or $_SESSION['redirect_uri']=="") {
             header("Location: https://keyshare.link/");
         } else {
             header("Location: ".$_SESSION['redirect_uri']);
@@ -145,11 +198,11 @@ if ( $loggedin == true) {
             $result2 = $conn->query($sql2);
             $row2 =  $result2->fetch_assoc();
  		    if ( $row2['username'] == $_SESSION['username']) {
-                if ( !strrpos("   ".$row2['ip'],$_SERVER['REMOTE_ADDR']) or $row2['ip'] == null) {
+                if ( !strrpos("   ".$row2['ip'],$USERIP) or $row2['ip'] == null) {
                     if ( $row2['ip'] == null ) {
-  					    $new_ips = $_SERVER['REMOTE_ADDR'];
+  					    $new_ips = $USERIP;
                     } else {
-  					    $new_ips = $row2['ip'] . "\n" . $_SERVER['REMOTE_ADDR'];
+  					    $new_ips = $row2['ip'] . "\n" . $USERIP;
                     }
                     $stmt = $conn->prepare("UPDATE accountprefs SET ip = ? WHERE username = ?;");
                 	$stmt->bind_param("ss", $new_ips ,$_SESSION['username']);
@@ -242,7 +295,7 @@ if ( $path[0] == "profile" ) {
 if ( $path[0] == "newkey" ) {
     if ($loggedin == true) {
         if (isset($_POST['submit']) and $_POST['submit'] == 1) {
-            $t = getToken(8);
+            $t = getToken(10);
             $stmt = $conn->prepare("INSERT INTO gamekeys (gametitle,gamekey,dateadded,captcha,reddit,reddit_owner,karma_link,karma_comment,account_age,hash,startdate) VALUES (?,?,?,?,?,?,?,?,?,?,?);");
             $stmt->bind_param("ssiiisiiisi", $value_gametitle, $value_gamekey, $value_dateadded, $value_captcha, $value_reddit, $value_reddit_owner, $value_karmalink, $value_karmacomment, $value_accountage, $value_hash, $value_startdate);
             $value_gametitle = htmlentities(substr($_POST['InputGameTitle'],0,200));
@@ -287,7 +340,7 @@ if ( $path[0] == "claim" ) {
         $result = $stmt->get_result();
         $row = $result->fetch_assoc();
 
-        $stmt = $conn->prepare("SELECT * FROM bans WHERE username = ?;");
+        $stmt = $conn->prepare("SELECT * FROM bans WHERE username like ?;"); //changed to like due to case-insensitive
         $stmt->bind_param("s", $_SESSION['username']);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -311,20 +364,40 @@ if ( $path[0] == "claim" ) {
           {
               $s = 0;
           }
-          $sql = "SELECT count(*) from ratelimit where who = '".addslashes($_SESSION['username'])."' AND lastclaim > ".(time()-1800).";";
+
+          // Weekly Global Limit
+          $sql = "SELECT count(*) from gamekeys where reddit_who = '".addslashes($_SESSION['username'])."' AND dateclaimed > ".(time()-(86400*7)).";";
+          $result = $conn->query($sql);
+          $data =  $result->fetch_assoc();
+          if ($data['count(*)'] >= $config['weekly_limit']) {
+            header("Location: /too-many" );
+            die("Redirect");
+          }
+          $sql = "SELECT count(*) from ratelimit_ip where who = '".addslashes($USERIP)."' AND lastclaim > ".(time()-(86400*7)).";";
+          $result = $conn->query($sql);
+          $data =  $result->fetch_assoc();
+          if ($data['count(*)'] >= $config['weekly_limit']) {
+            header("Location: /too-many" );
+            die("Redirect");
+          }
+
+          // Global Limit for 30 minutes
+          $sql = "SELECT count(*) from ratelimit where who = '".addslashes($_SESSION['username'])."' AND lastclaim > ".(time() - $config['ratelimit_duration']).";";
           $result = $conn->query($sql);
           $data =  $result->fetch_assoc();
           if ($data['count(*)'] > 0) {
             header("Location: /too-many" );
             die("Redirect");
           }
-          $sql = "SELECT count(*) from ratelimit_ip where who = '".addslashes($_SERVER['REMOTE_ADDR'])."' AND lastclaim > ".(time()-1800).";";
+          $sql = "SELECT count(*) from ratelimit_ip where who = '".addslashes($USERIP)."' AND lastclaim > ".(time() - $config['ratelimit_duration']).";";
           $result = $conn->query($sql);
           $data =  $result->fetch_assoc();
           if ($data['count(*)'] > 0) {
             header("Location: /too-many" );
             die("Redirect");
           }
+
+
 
           if ( $s == 1) {
             if (!preg_match('/[^A-Za-z0-9]/', $path[1])) // '/[^a-z\d]/i' should also work.
@@ -334,30 +407,11 @@ if ( $path[0] == "claim" ) {
                     $sql = "UPDATE gamekeys SET claimed = 1, reddit_who = '".addslashes($_SESSION['username'])."', dateclaimed = ".time()." WHERE hash = '".$path[1]."';";
                     $result = $conn->query($sql);
 
-
-                    $sql = "SELECT count(*) from ratelimit where who = '".addslashes($_SESSION['username'])."';";
-                    $result = $conn->query($sql);
-                    $data =  $result->fetch_assoc();
-                    if ( $data['count(*)'] > 0 ) {
-                        $sql = "UPDATE ratelimit SET lastclaim = ".time()." WHERE who = '".addslashes($_SESSION['username'])."';";
-                        $result = $conn->query($sql);
-                    } else {
                         $sql = "INSERT INTO ratelimit (who,lastclaim) VALUES ('".addslashes($_SESSION['username'])."',".time().");";
-                        //echo $sql;
                         $result = $conn->query($sql);
-                    }
 
-                    $sql = "SELECT count(*) from ratelimit_ip where who = '".addslashes($_SERVER['REMOTE_ADDR'])."';";
-                    $result = $conn->query($sql);
-                    $data =  $result->fetch_assoc();
-                    if ( $data['count(*)'] > 0 ) {
-                        $sql = "UPDATE ratelimit_ip SET lastclaim = ".time()." WHERE who = '".addslashes($_SERVER['REMOTE_ADDR'])."';";
+                        $sql = "INSERT INTO ratelimit_ip (who,lastclaim) VALUES ('".addslashes($USERIP)."',".time().");";
                         $result = $conn->query($sql);
-                    } else {
-                        $sql = "INSERT INTO ratelimit_ip (who,lastclaim) VALUES ('".addslashes($_SERVER['REMOTE_ADDR'])."',".time().");";
-                        //echo $sql;
-                        $result = $conn->query($sql);
-                    }
                 }
                 header("Location: /k/".$path[1] );
                 die("Redirect");
@@ -540,6 +594,7 @@ if ( $path[0] == "too-many" ){
 ?>
 Thank you for your interest in this key<br>
 But unfortunately there is a limit of 1 key per 30 minutes<br>
+Or you may have hit a site-wide limit of weekly claims<br>
 To give everyone a fair chance to get keys.
 <?php
 }
@@ -555,7 +610,7 @@ unfortunately you have been restricted from this giveaway or site.<br>
 if ( $path[0] == "" ) {
     echo $Parsedown->text(file_get_contents('about.md')) ;
 }
-if ( $path[0] == "profile" and $path[1] == 'banned') {
+if ( $path[0] == "profile" and ( isset( $path[1]) and $path[1] == 'banned') ){
     if ($loggedin == true) {
         if ( isset( $_POST['removeban'] ) ) {
             $stmt = $conn->prepare("DELETE FROM bans WHERE id = ? AND owner = ?;");
@@ -609,7 +664,7 @@ if ( $path[0] == "profile" and $path[1] == 'banned') {
     }
 
 }
-if ( $path[0] == "profile" and (( $path[1] == '') or $path[1] == 'claimed')) {
+if ( $path[0] == "profile" and (( !isset($path[1]) or $path[1] == '') or $path[1] == 'claimed')) {
 //if ( $path[0] == "profile" ) {
     if ($loggedin == true) {
 
@@ -634,7 +689,7 @@ if ( $path[0] == "profile" and (( $path[1] == '') or $path[1] == 'claimed')) {
         //default unclaimed
         $sql = "SELECT * FROM gamekeys WHERE reddit_owner = '".$_SESSION['username']."' AND claimed = 0;";
         if ( isset($path[1]) and $path[1] == "claimed") {
-            $sql = "SELECT * FROM gamekeys WHERE reddit_owner = '".$_SESSION['username']."' AND claimed = 1;";
+            $sql = "SELECT * FROM gamekeys WHERE reddit_owner = '".$_SESSION['username']."' AND claimed = 1 ORDER BY dateclaimed DESC;";
         }
 $result = $conn->query($sql);
 $kn=0;
@@ -765,7 +820,7 @@ $kn++;
                     echo "key already claimed by another user<br>and is past the security reveal time.";
                 } else {
                     if ($row['reddit'] == 1 and $loggedin == false) {
-                        echo "this key requires you to be logged in to claim it";
+                        echo "this key requires you to be logged in to claim it<br><br><a href='/login'>Login Here</a>";
                     } else {
                         $aok = 1;
                         if ( $row['karma_link'] > 0 AND intval($_SESSION['karma_link']) < $row['karma_link'] ) { $aok = 0; }
