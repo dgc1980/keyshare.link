@@ -365,8 +365,22 @@ if ( $path[0] == "claim" ) {
               $s = 0;
           }
 
-          // Weekly Global Limit
+
+
+          // block claims from same gifter within 24 hours
+
+          $sql = "SELECT count(*) from gamekeys where reddit_who = '".addslashes($_SESSION['username'])."' AND reddit_owner = '".addslashes($row['reddit_owner'])."'AND dateclaimed > ".(time()-(86400)).";";
+          $result = $conn->query($sql);
+          $data =  $result->fetch_assoc();
+          if ($data['count(*)'] >= 1) {
+            header("Location: /too-many" );
+            die("Redirect");
+          }
+
           $sql = "SELECT count(*) from gamekeys where reddit_who = '".addslashes($_SESSION['username'])."' AND dateclaimed > ".(time()-(86400*7)).";";
+
+          // Weekly Global Limit
+
           $result = $conn->query($sql);
           $data =  $result->fetch_assoc();
           if ($data['count(*)'] >= $config['weekly_limit']) {
@@ -594,6 +608,7 @@ if ( $path[0] == "too-many" ){
 ?>
 Thank you for your interest in this key<br>
 But unfortunately there is a limit of 1 key per 30 minutes<br>
+There is also a limit of 1 key per 24 hours from the same submitter<br>
 Or you may have hit a site-wide limit of weekly claims<br>
 To give everyone a fair chance to get keys.
 <?php
